@@ -2,3 +2,13 @@ wplatex
 =======
 
 Python tools for converting and uploading latex files to wordpress
+
+The command:
+
+python setup.py sdist
+
+should build the package.  Once it is built, I think unzipping it and doing a
+
+python setup.py install
+
+(with root priviledges) should install it on your system.  Good luck!

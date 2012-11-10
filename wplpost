@@ -1,0 +1,115 @@
+#!/usr/bin/env python
+
+from wplatex import WordPressLatexPost
+from wplatex import WordPressLatexClient
+
+from getpass import getpass
+from optparse import OptionParser
+
+import sys
+
+def show_tree(node, prefix=''):
+    """Display the tree from this node on
+    
+    Arguments:
+    - `node`:
+    """
+    print prefix + str(type(node))
+
+    for n in node.childNodes:
+        show_tree(n, prefix + '  ')
+
+#
+#  Main()
+#
+
+def main(argv=None):
+    """A main function for this module
+    
+    Arguments:
+    - `argv`:
+    """
+    if argv is None:
+        argv = sys.argv[1:]
+
+    parser = OptionParser()
+
+    #
+    #  Not all these are implemented yet, but at least there are some ideas
+    #
+
+    parser.add_option('-b', '--blog', dest='blog')            # specify your blog name, e.g. curiousreasoning
+    parser.add_option('-u', '--username', dest='username')    # your wordpress username
+    parser.add_option('-p', '--password', dest='password')    # your wordpress password
+
+    parser.add_option('-n', '--no-post', action='store_true', dest='no_post', default=False) # dump a preview
+    parser.add_option('-d', '--draft', action='store_true', dest='draft', default=False) # upload as a draft
+    parser.add_option('-t', '--tree', action='store_true', dest='tree', default=False) # show the doc tree
+
+    parser.add_option('-x', '--xmlrpc-url', dest='url') # give the xmlrpc url by hand
+    parser.add_option('-c', '--classpath', dest='classpath')
+
+    (options, args) = parser.parse_args(argv)
+
+    if len(args) == 0:
+        parser.print_help()
+        return 0
+
+    # Add a path entry for our custom classfile if necessary
+    if options.classpath is not None:
+        sys.path.append(options.classpath)
+    else:
+        # Assume we'll find the python class file in the package directory
+        import wplatex
+        sys.path += wplatex.__path__
+
+    f = open(args[0])
+    latex = f.read()
+    f.close()
+
+    post = WordPressLatexPost(latex)
+
+    if options.tree:
+        show_tree(post._document)
+        return 0
+
+    # Post it! (or not . . .)
+    if options.no_post:
+        # This should leave the image filenames as they are
+        post.render()
+        print '\n' + post.description + '\n'
+    else:
+        # Take care of the web stuff . . .
+        
+        username = options.username
+
+        if username is None:
+            username = raw_input('\nWordpress Username: ')
+        
+        password = options.password
+
+        if password is None:
+            password = getpass('Wordpress Password: ')
+
+        url = None
+
+        # First see if we have a blog name
+        if options.blog is not None:
+            url = 'http://' + options.blog + '.wordpress.com/xmlrpc.php'
+
+        # ... and now override if necessary
+        if options.url is not None:
+            url = options.url
+
+        if url is None:
+            print "No Wordpress URL specified!"
+            return -1
+
+        wp = WordPressLatexClient(url, username, password)
+
+        idPost = wp.newPost(post, not options.draft)
+
+    return 0
+
+if __name__ == '__main__':
+    sys.exit(main())
